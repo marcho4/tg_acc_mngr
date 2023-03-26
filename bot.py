@@ -67,13 +67,14 @@ async def start_handler(message: types.Message):
     )
     await message.answer(f'GM, {first_name}')
     await message.answer('Chose one of the commands below', reply_markup=keyboard)
+    await Global.waiting_for_action.set()
     # await message.answer('You have already started the bot')
 
 
 @dp.message_handler(state='*', commands=['help'])
 async def help_handler(message: types.Message):
     await message.answer(f'/start\n'
-                         f'/help - list of all available comands\n'
+                         f'/help - list of all available commands\n'
                          f'/add_discord - add discord account to the data base\n'
                          f'/add_twitter - add twitter account to the data base\n'
                          f'/edit_account - edit data for the chosen account\n'
@@ -83,28 +84,37 @@ async def help_handler(message: types.Message):
                          f'/btc - current price of BTC')
 
 
-@dp.message_handler(commands=['add_discord'])
+# Adding discord to the database
+@dp.message_handler(commands=['add_discord'], state=Global.waiting_for_action)
 async def add_discord(message: types.Message):
-    global add_ds
-    add_ds = True
     await AddingAccount.entering_data.set()
     await message.answer(f'enter account data in this format:\n'
                          f' \nnickname;login;password;token\n', reply_markup=empty_keyboard)
 
 
-@dp.message_handler(state=AddingAccount.entering_data)
+@dp.message_handler(lambda message: ';' in message.text and len(message.text.split(';')) == 4 and \
+                                    message.text.split(';')[3][:2] == 'OT',
+                    state=AddingAccount.entering_data)
 async def corr_data(message: types.Message):
-    if ';' in message.text and len(message.text.split(';')) == 4 and message.text.split(';')[3][:2] == 'OT':
-        curr_nick, curr_login, curr_pswrd, curr_token = message.text.split(';')
-        acc = Account()
-        acc.user_id = tg_uid
-        acc.token = curr_token
-        acc.login = curr_login
-        acc.nickname = curr_nick
-        acc.password = curr_pswrd
-        db_sess.add(acc)
-        db_sess.commit()
-        await message.answer(f'Data accepted')
+    global curr_nick, curr_login, curr_pswrd, curr_token
+    curr_nick, curr_login, curr_pswrd, curr_token = message.text.split(';')
+    acc = Account()
+    acc.user_id = tg_uid
+    acc.token = curr_token
+    acc.login = curr_login
+    acc.nickname = curr_nick
+    acc.password = curr_pswrd
+    db_sess.add(acc)
+    db_sess.commit()
+    await message.answer(f'Data accepted')
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(lambda message: ';' not in message.text or len(message.text.split(';')) != 4 and \
+                                    message.text.split(';')[3][:2] != 'OT',
+                    state=AddingAccount.entering_data)
+async def wrong_data(message: types.Message):
+    await message.answer('Wrong data, please enter again')
 
 
 @dp.message_handler(commands=['add_twitter'])
@@ -117,16 +127,12 @@ async def edit_account(message: types.Message):
     await message.answer(f'chose account')
 
 
-@dp.message_handler(commands=['cancel'], state='*')
+@dp.message_handler(commands=['cancel'], state='')
 async def edit_account(message: types.Message):
-    global add_ds, add_tw
-    # dp.current_state() == 'waiting for action'
-    if add_ds or add_tw:
-        add_ds = add_tw = False
-        await Global.waiting_for_action.set()
-        await message.answer('Action canceled', reply_markup=empty_keyboard)
-    else:
-        await message.answer('There is no command to cancel', reply_markup=empty_keyboard)
+    await Global.waiting_for_action.set()
+    await message.answer('Action canceled', reply_markup=empty_keyboard)
+    await message.answer('There is no command to cancel', reply_markup=empty_keyboard)
+    await Global.waiting_for_action.set()
 
 
 @dp.message_handler(commands=['get_data'], state=Global.waiting_for_action)
@@ -142,6 +148,7 @@ async def get_data(message: types.Message):
         input_field_placeholder="chose account"
     )
     await message.answer(f'chose account', reply_markup=list_of_accounts)
+    await GettingData.choosing_account.set()
 
 
 @dp.message_handler()
