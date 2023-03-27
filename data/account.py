@@ -10,3 +10,6 @@ class Account(SqlAlchemyBase):
     login = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     password = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     token = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+
+    def get_acc_data(self):
+        return f'nickname: {self.nickname}\nlogin: {self.login}\npassword: {self.password}\ntoken: {self.token}'
