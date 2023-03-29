@@ -8,14 +8,13 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from data.crypto_price import get_btc_price
 from data.twitter import Twitter
 from data.states import Global, GettingData, AddingAccount, AddingTwtAccount, EditingAcc
+from data.get_session import get_session
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
-tg_uid = 0
 curr_nick = curr_login = curr_password = curr_token = ''
 twt_phone = twt_username = twt_password = twt_login = ''
-db_sess = None
 list_of_accs = []
 
 
@@ -39,11 +38,6 @@ async def already_started(message: types.Message):
 
 @dp.message_handler(commands=['start'], state='*')
 async def start_handler(message: types.Message):
-    global tg_uid, db_sess
-    uid = message.from_user.id
-    tg_uid = uid
-    db_session.global_init(f"db/{uid}.db")
-    db_sess = db_session.create_session()
     await message.answer('Chose one of the commands below', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -78,13 +72,14 @@ async def corr_data(message: types.Message):
     global curr_nick, curr_login, curr_password, curr_token
     curr_nick, curr_login, curr_password, curr_token = message.text.split(';')
     acc = Account()
-    acc.user_id = tg_uid
+    acc.user_id = str(message.from_user.id)
     acc.token = curr_token
     acc.login = curr_login
     acc.nickname = curr_nick
     acc.password = curr_password
-    db_sess.add(acc)
-    db_sess.commit()
+    session = get_session(message.from_user.id)
+    session.add(acc)
+    session.commit()
     await message.answer(f'Data accepted', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -115,11 +110,11 @@ async def cor_data(message: types.Message):
     twt_password = message.text.split(';')[1]
     twt_username = message.text.split(';')[2]
     twt_phone = message.text.split(';')[3]
-    global list_of_accs, db_sess
+    global list_of_accs
     list_of_accs = []
-    db_sess = db_session.create_session()
+    session = get_session(message.from_user.id)
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
-    for acc in db_sess.query(Account).filter(Account.user_id == tg_uid):
+    for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accs.append(str(acc.nickname))
     await message.answer(f'Select the account to which you want to link this data', reply_markup=kb)
@@ -129,15 +124,15 @@ async def cor_data(message: types.Message):
 @dp.message_handler(lambda message: message.text in list_of_accs,
                     state=AddingTwtAccount.choosing_discord)
 async def wd(message: types.Message):
-    global db_sess
     twt = Twitter()
     twt.login = twt_login
     twt.username = twt_username
-    twt.discord_nickname = message.text
+    twt.discord_nickname = str(message.text)
     twt.password = twt_password
     twt.phone = twt.phone
-    db_sess.add(twt)
-    db_sess.commit()
+    session = get_session(message.from_user.id)
+    session.add(twt)
+    session.commit()
     await message.answer('Data accepted.', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -167,11 +162,11 @@ async def edit_account(message: types.Message):
 # ------------------------- Get Data Command | Done----------------------------------
 @dp.message_handler(commands=['get_data'], state=Global.waiting_for_action)
 async def get_data(message: types.Message):
-    global list_of_accs, db_sess
+    global list_of_accs
     list_of_accs = []
-    db_sess = db_session.create_session()
+    session = get_session(message.from_user.id)
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
-    for acc in db_sess.query(Account).filter(Account.user_id == tg_uid):
+    for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accs.append(str(acc.nickname))
     await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
@@ -180,10 +175,9 @@ async def get_data(message: types.Message):
 
 @dp.message_handler(lambda message: message.text in list_of_accs, state=GettingData.choosing_account)
 async def send_data(message: types.Message):
-    global db_sess
-    db_sess = db_session.create_session()
-    account = db_sess.query(Account).filter(Account.nickname == message.text).first()
-    twt = db_sess.query(Twitter).filter(Twitter.discord_nickname == message.text).first()
+    session = get_session(message.from_user.id)
+    account = session.query(Account).filter(Account.nickname == message.text).first()
+    twt = session.query(Twitter).filter(Twitter.discord_nickname == message.text).first()
     if account:
         await message.answer(account.get_acc_data(), reply_markup=get_start_keyboard())
     if twt:
