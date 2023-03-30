@@ -39,3 +39,9 @@ def get_start_keyboard():
     for x in commands[0]:
         start_keyboard.add(x)
     return start_keyboard
+
+
+columns = ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    input_field_placeholder="Choose column"
+).add(KeyboardButton(text="nickname")).add(KeyboardButton(text="login")).add(KeyboardButton(text="password"))

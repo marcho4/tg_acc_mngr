@@ -1,7 +1,6 @@
 from data.CONFIG import TOKEN
-from data import db_session
 from data.account import Account
-from data.keyboard_maker import empty_keyboard, keyboard, get_start_keyboard
+from data.keyboard_maker import empty_keyboard, get_start_keyboard, columns
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -52,7 +51,6 @@ async def help_handler(message: types.Message):
                          f'/edit_account - edit data for the chosen account\n'
                          f'/get_data - get data of the account\n'
                          f'/cancel - cancel the command\n'
-                         f'/sigma - sigma rules for real men\n'
                          f'/btc - current price of BTC')
 
 
@@ -153,10 +151,41 @@ async def wd(message: types.Message):
 
 
 # ------------------------- Editing Account Data | Not Ready ----------------------------------
-@dp.message_handler(commands=['edit_account'])
+@dp.message_handler(commands=['edit_account'], state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
-    await message.answer(f'Choose account')
-    await AddingTwtAccount.entering_data.set()
+    global list_of_accs
+    list_of_accs = []
+    session = get_session(message.from_user.id)
+    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
+        kb.add(types.KeyboardButton(text=str(acc.nickname)))
+        list_of_accs.append(str(acc.nickname))
+    await message.answer(f'Choose account', reply_markup=kb)
+    await EditingAcc.choosing_account.set()
+
+
+@dp.message_handler(lambda message: message.text in list_of_accs, state=EditingAcc.choosing_account)
+async def choosing_column(message: types.Message):
+    await message.answer('Choose parameter to edit', reply_markup=columns)
+    await EditingAcc.choosing_param.set()
+
+
+@dp.message_handler(lambda message: message.text in ['nickname', 'password', 'login'], state=EditingAcc.choosing_param)
+async def choosing_param(message: types.Message):
+    if message.text == 'nickname':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingAcc.nickname.set()
+    if message.text == 'login':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingAcc.login.set()
+    if message.text == 'password':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingAcc.password.set()
+
+
+@dp.message_handler(lambda message: message.text not in list_of_accs, state=EditingAcc.choosing_account)
+async def wait(message: types.Message):
+    await message.answer('There is no account with this nickname')
 
 
 # ------------------------- Get Data Command | Done----------------------------------

@@ -25,5 +25,8 @@ class AddingTwtAccount(StatesGroup):
 class EditingAcc(StatesGroup):
     choosing_account = State()
     choosing_param = State()
+    login = State()
+    password = State()
+    nickname = State()
     entering_changes = State()
     accepting_changes = State()
