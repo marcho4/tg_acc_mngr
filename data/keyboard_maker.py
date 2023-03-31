@@ -28,8 +28,7 @@ def get_start_keyboard():
             KeyboardButton(text="/add_twitter"),
             KeyboardButton(text="/edit_account"),
             KeyboardButton(text="/get_data"),
-            KeyboardButton(text="/btc"),
-            KeyboardButton(text="/sigma")
+            KeyboardButton(text="/btc")
         ],
     ]
     start_keyboard = ReplyKeyboardMarkup(

@@ -15,6 +15,7 @@ dp.middleware.setup(LoggingMiddleware())
 curr_nick = curr_login = curr_password = curr_token = ''
 twt_phone = twt_username = twt_password = twt_login = ''
 list_of_accs = []
+chosen_account = ''
 
 
 # ------------------------- Cancel Command | Done----------------------------------
@@ -75,7 +76,7 @@ async def corr_data(message: types.Message):
     acc.login = curr_login
     acc.nickname = curr_nick
     acc.password = curr_password
-    session = get_session(message.from_user.id)
+    session = get_session()
     session.add(acc)
     session.commit()
     await message.answer(f'Data accepted', reply_markup=get_start_keyboard())
@@ -110,7 +111,7 @@ async def cor_data(message: types.Message):
     twt_phone = message.text.split(';')[3]
     global list_of_accs
     list_of_accs = []
-    session = get_session(message.from_user.id)
+    session = get_session()
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
@@ -128,7 +129,7 @@ async def wd(message: types.Message):
     twt.discord_nickname = str(message.text)
     twt.password = twt_password
     twt.phone = twt.phone
-    session = get_session(message.from_user.id)
+    session = get_session()
     session.add(twt)
     session.commit()
     await message.answer('Data accepted.', reply_markup=get_start_keyboard())
@@ -155,7 +156,7 @@ async def wd(message: types.Message):
 async def edit_account(message: types.Message):
     global list_of_accs
     list_of_accs = []
-    session = get_session(message.from_user.id)
+    session = get_session()
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
@@ -166,6 +167,8 @@ async def edit_account(message: types.Message):
 
 @dp.message_handler(lambda message: message.text in list_of_accs, state=EditingAcc.choosing_account)
 async def choosing_column(message: types.Message):
+    global chosen_account
+    chosen_account = message.text
     await message.answer('Choose parameter to edit', reply_markup=columns)
     await EditingAcc.choosing_param.set()
 
@@ -183,6 +186,33 @@ async def choosing_param(message: types.Message):
         await EditingAcc.password.set()
 
 
+@dp.message_handler(state=EditingAcc.password)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Account).filter(Account.nickname == chosen_account).first()
+    acc.password = message.text
+    await message.answer(f'New password was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(state=EditingAcc.login)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Account).filter(Account.nickname == chosen_account).first()
+    acc.login = message.text
+    await message.answer(f'New login was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(state=EditingAcc.nickname)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Account).filter(Account.nickname == chosen_account).first()
+    acc.nickname = message.text
+    await message.answer(f'New nickname was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
 @dp.message_handler(lambda message: message.text not in list_of_accs, state=EditingAcc.choosing_account)
 async def wait(message: types.Message):
     await message.answer('There is no account with this nickname')
@@ -193,7 +223,7 @@ async def wait(message: types.Message):
 async def get_data(message: types.Message):
     global list_of_accs
     list_of_accs = []
-    session = get_session(message.from_user.id)
+    session = get_session()
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
@@ -204,7 +234,7 @@ async def get_data(message: types.Message):
 
 @dp.message_handler(lambda message: message.text in list_of_accs, state=GettingData.choosing_account)
 async def send_data(message: types.Message):
-    session = get_session(message.from_user.id)
+    session = get_session()
     account = session.query(Account).filter(Account.nickname == message.text).first()
     twt = session.query(Twitter).filter(Twitter.discord_nickname == message.text).first()
     if account:
@@ -212,7 +242,7 @@ async def send_data(message: types.Message):
     if twt:
         await message.answer(twt.get_acc_data(), reply_markup=get_start_keyboard())
     if not twt and not account:
-        await message.answer('There isnt any data', reply_markup=empty_keyboard)
+        await message.answer("There isn't any data", reply_markup=empty_keyboard)
     await Global.waiting_for_action.set()
 
 
