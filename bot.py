@@ -100,8 +100,7 @@ async def add_twitter(message: types.Message):
                          f' \nlogin;password;username;phone\n\nTo cancel use /cancel', reply_markup=empty_keyboard)
 
 
-@dp.message_handler(lambda message: ';' in message.text and len(message.text.split(';')) == 4
-                                    and message.text.split(';')[3].isdigit(),
+@dp.message_handler(lambda message: ';' in message.text and len(message.text.split(';')) == 4,
                     state=AddingTwtAccount.entering_data)
 async def cor_data(message: types.Message):
     global twt_phone, twt_username, twt_password, twt_login
@@ -128,7 +127,7 @@ async def wd(message: types.Message):
     twt.username = twt_username
     twt.discord_nickname = str(message.text)
     twt.password = twt_password
-    twt.phone = twt.phone
+    twt.phone = twt_phone
     session = get_session()
     session.add(twt)
     session.commit()
