@@ -18,7 +18,7 @@ list_of_accs = []
 chosen_account = ''
 
 
-# ------------------------- Cancel Command | Done----------------------------------
+# ------------------------- Cancel Command ----------------------------------
 @dp.message_handler(commands=['cancel'], state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
     await message.answer('There is no command to cancel', reply_markup=get_start_keyboard())
@@ -30,7 +30,7 @@ async def edit_account(message: types.Message):
     await message.answer('Action canceled', reply_markup=get_start_keyboard())
 
 
-# ------------------------- Start Command | Done----------------------------------
+# ------------------------- Start Command -----------------------------------
 @dp.message_handler(commands=['start'], state=Global.waiting_for_action)
 async def already_started(message: types.Message):
     await message.answer('bot has already been started', reply_markup=get_start_keyboard())
@@ -42,7 +42,7 @@ async def start_handler(message: types.Message):
     await Global.waiting_for_action.set()
 
 
-# ------------------------- Help Command | Done----------------------------------
+# ------------------------- Help Command -----------------------------------
 @dp.message_handler(state='*', commands=['help'])
 async def help_handler(message: types.Message):
     await message.answer(f'/start\n'
@@ -55,21 +55,21 @@ async def help_handler(message: types.Message):
                          f'/btc - current price of BTC')
 
 
-# ------------------------- Adding Discord | Done----------------------------------
+# ------------------------- Adding Discord ----------------------------------
 @dp.message_handler(commands=['add_discord'], state=Global.waiting_for_action)
 async def add_discord(message: types.Message):
     await AddingAccount.entering_data.set()
     await message.answer(f'enter account data in this format:\n'
-                         f' \nnickname;login;password;token\n\nTo cancel use /cancel', reply_markup=empty_keyboard)
+                         f' \nlogin;password;token;nickname\n\nTo cancel use /cancel', reply_markup=empty_keyboard)
 
 
 # For correct data
 @dp.message_handler(lambda message: ';' in message.text and len(message.text.split(';')) == 4 and \
-                                    message.text.split(';')[3][:2] == 'OT',
+                                    message.text.split(';')[2][:2] == 'OT',
                     state=AddingAccount.entering_data)
 async def corr_data(message: types.Message):
     global curr_nick, curr_login, curr_password, curr_token
-    curr_nick, curr_login, curr_password, curr_token = message.text.split(';')
+    curr_login, curr_password, curr_token, curr_nick = message.text.split(';')
     acc = Account()
     acc.user_id = str(message.from_user.id)
     acc.token = curr_token
@@ -92,7 +92,7 @@ async def wrong_data(message: types.Message):
                          'If you dont wanna add an account - use /cancel')
 
 
-# ------------------------- Adding Twitter | Not Ready ----------------------------------
+# ------------------------- Adding Twitter ----------------------------------
 @dp.message_handler(commands=['add_twitter'], state=Global.waiting_for_action)
 async def add_twitter(message: types.Message):
     await AddingTwtAccount.entering_data.set()
@@ -151,7 +151,7 @@ async def wd(message: types.Message):
                          'If you dont wanna add an account - use /cancel')
 
 
-# ------------------------- Editing Account Data | Not Ready ----------------------------------
+# ------------------------- Editing Account Data ----------------------------------
 @dp.message_handler(commands=['edit_account'], state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
     global list_of_accs
@@ -191,6 +191,7 @@ async def wait(message: types.Message):
     session = get_session()
     acc = session.query(Account).filter(Account.nickname == chosen_account).first()
     acc.password = message.text
+    session.commit()
     await message.answer(f'New password was set', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -200,6 +201,7 @@ async def wait(message: types.Message):
     session = get_session()
     acc = session.query(Account).filter(Account.nickname == chosen_account).first()
     acc.login = message.text
+    session.commit()
     await message.answer(f'New login was set', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -209,6 +211,7 @@ async def wait(message: types.Message):
     session = get_session()
     acc = session.query(Account).filter(Account.nickname == chosen_account).first()
     acc.nickname = message.text
+    session.commit()
     await message.answer(f'New nickname was set', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
@@ -218,7 +221,7 @@ async def wait(message: types.Message):
     await message.answer('There is no account with this nickname')
 
 
-# ------------------------- Get Data Command | Done----------------------------------
+# ------------------------- Get Data Command ----------------------------------
 @dp.message_handler(commands=['get_data'], state=Global.waiting_for_action)
 async def get_data(message: types.Message):
     global list_of_accs
@@ -260,10 +263,6 @@ async def sigma(message: types.Message):
 @dp.message_handler(commands=['btc'], state=Global.waiting_for_action)
 async def btc(message: types.Message):
     await message.answer(get_btc_price())
-
-
-# async def acceptation(msg: types.Message):
-#     await msg.answer('Do you submit your data?', reply_markup=kb1)
 
 
 if __name__ == '__main__':
