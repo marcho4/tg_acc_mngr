@@ -6,7 +6,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from data.crypto_price import get_btc_price
 from data.twitter import Twitter
-from data.states import Global, GettingData, AddingAccount, AddingTwtAccount, EditingAcc
+from data.states import Global, GettingData, AddingAccount, AddingTwtAccount, EditingAcc, BulkAdd
 from data.get_session import get_session
 
 bot = Bot(token=TOKEN)
@@ -251,6 +251,12 @@ async def send_data(message: types.Message):
 @dp.message_handler(lambda message: message.text not in list_of_accs, state=GettingData.choosing_account)
 async def wrong_acc(message: types.Message):
     await message.answer("There isn't any accounts with this nickname\n\nTo cancel use /cancel")
+
+
+@dp.message_handler(commands=['bulk_add'], state=Global.waiting_for_action)
+async def bulk(msg: types.Message):
+    await msg.answer('Enter bulk data like this:\ncolumn1:column2:...column100\nvalue1:value2:...value100')
+    await BulkAdd.entering.set()
 
 
 # ------------------------- Simple Commands Just For Fun ----------------------------------

@@ -30,3 +30,7 @@ class EditingAcc(StatesGroup):
     nickname = State()
     entering_changes = State()
     accepting_changes = State()
+
+
+class BulkAdd(StatesGroup):
+    entering = State()
