@@ -55,43 +55,6 @@ async def help_handler(message: types.Message):
                          f'/btc - current price of BTC')
 
 
-# ------------------------- Adding Discord ----------------------------------
-@dp.message_handler(commands=['add_discord'], state=Global.waiting_for_action)
-async def add_discord(message: types.Message):
-    await AddingAccount.entering_data.set()
-    await message.answer(f'enter account data in this format:\n'
-                         f' \nlogin;password;token;nickname\n\nTo cancel use /cancel', reply_markup=empty_keyboard)
-
-
-# For correct data
-@dp.message_handler(lambda message: ';' in message.text and len(message.text.split(';')) == 4 and \
-                                    message.text.split(';')[2][:2] == 'OT',
-                    state=AddingAccount.entering_data)
-async def corr_data(message: types.Message):
-    global curr_nick, curr_login, curr_password, curr_token
-    curr_login, curr_password, curr_token, curr_nick = message.text.split(';')
-    acc = Account()
-    acc.user_id = str(message.from_user.id)
-    acc.token = curr_token
-    acc.login = curr_login
-    acc.nickname = curr_nick
-    acc.password = curr_password
-    session = get_session()
-    session.add(acc)
-    session.commit()
-    await message.answer(f'Data accepted', reply_markup=get_start_keyboard())
-    await Global.waiting_for_action.set()
-
-
-# For wrong data
-@dp.message_handler(lambda message: ';' not in message.text or len(message.text.split(';')) != 4 or \
-                                    message.text.split(';')[3][:2] != 'OT',
-                    state=AddingAccount.entering_data)
-async def wrong_data(message: types.Message):
-    await message.answer('Wrong data, please enter again.\n\n'
-                         'If you dont wanna add an account - use /cancel')
-
-
 # ------------------------- Adding Twitter ----------------------------------
 @dp.message_handler(commands=['add_twitter'], state=Global.waiting_for_action)
 async def add_twitter(message: types.Message):
@@ -253,10 +216,28 @@ async def wrong_acc(message: types.Message):
     await message.answer("There isn't any accounts with this nickname\n\nTo cancel use /cancel")
 
 
-@dp.message_handler(commands=['bulk_add'], state=Global.waiting_for_action)
+@dp.message_handler(commands=['add_discord'], state=Global.waiting_for_action)
 async def bulk(msg: types.Message):
-    await msg.answer('Enter bulk data like this:\ncolumn1:column2:...column100\nvalue1:value2:...value100')
+    await msg.answer('Enter account data in this format:\n\nlogin:password:token:nick\n\nYou can add multiple accounts')
     await BulkAdd.entering.set()
+
+
+@dp.message_handler(state=BulkAdd.entering)
+async def getting_bulk_data(msg: types.Message):
+    try:
+        session = get_session()
+        data = msg.text.split()
+        for x in data:
+            acc = Account()
+            acc.user_id = msg.from_user.id
+            acc.login, acc.password, acc.token, acc.nickname = x.split(':')
+            session.add(acc)
+        session.commit()
+        await msg.answer('Accounts accepted', reply_markup=get_start_keyboard())
+        await Global.waiting_for_action.set()
+    except Exception:
+        await msg.answer('Something went wrong\nRestart the command', reply_markup=get_start_keyboard())
+        await Global.waiting_for_action.set()
 
 
 # ------------------------- Simple Commands Just For Fun ----------------------------------
@@ -268,6 +249,17 @@ async def sigma(message: types.Message):
 @dp.message_handler(commands=['btc'], state=Global.waiting_for_action)
 async def btc(message: types.Message):
     await message.answer(get_btc_price())
+
+
+@dp.message_handler(commands=['sellers'], state=Global.waiting_for_action)
+async def sigma(message: types.Message):
+    await message.answer(
+        f'Discord accounts\n\n'
+        f'https://darkstore.biz/products/view/akkaunty-discord-pocta-ramblerru-token-sms-verified-mailpasswordtoken'
+        f'-otlezka-1-7-dnej\n\n'
+        f'Twitter accounts\n\n'
+        f'https://darkstore.biz/products/view/twitter-avatar-polnaa-verifikacia-2022-podtverzdeno-po-sms-podtve'
+        f'rzdeno-po-pocte-gmx-parol-pocty-ne-predostavlaetsa-zen-authtoken')
 
 
 if __name__ == '__main__':

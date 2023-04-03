@@ -27,13 +27,17 @@ def get_start_keyboard():
             KeyboardButton(text="/add_discord"),
             KeyboardButton(text="/add_twitter"),
             KeyboardButton(text="/edit_account"),
+            # KeyboardButton(text="/delete_acc"), under development
+            # KeyboardButton(text="/delete_twitter"), under development
+            # KeyboardButton(text="/edit_twitter"), under development
             KeyboardButton(text="/get_data"),
-            KeyboardButton(text="/btc")
+            KeyboardButton(text="/btc"),
+            KeyboardButton(text="/sellers")
         ],
     ]
     start_keyboard = ReplyKeyboardMarkup(
         resize_keyboard=True,
-        input_field_placeholder="chose action"
+        input_field_placeholder="Choose action"
     )
     for x in commands[0]:
         start_keyboard.add(x)
