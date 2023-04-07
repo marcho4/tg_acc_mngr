@@ -84,11 +84,8 @@ async def cor_data(message: types.Message):
                     state=AddingTwtAccount.choosing_discord)
 async def wd(message: types.Message):
     twt = Twitter()
-    twt.login = twt_login
-    twt.username = twt_username
-    twt.discord_nickname = str(message.text)
-    twt.password = twt_password
-    twt.phone = twt_phone
+    twt.login, twt.username, twt.discord_nickname, twt.password, twt.phone, twt.user_id = twt_login, twt_username, str(
+        message.text), twt_password, twt_phone, message.from_user.id
     session = get_session()
     session.add(twt)
     session.commit()
@@ -263,7 +260,7 @@ async def delete_choice(message: types.Message):
 
 
 @dp.message_handler(lambda message: message not in list_of_accounts, state=DeleteDiscord.choosing)
-def error(message: types.Message):
+async def error(message: types.Message):
     await message.answer('There is no account with this nickname, please try again')
     await Global.waiting_for_action.set()
 
@@ -293,7 +290,7 @@ async def delete_twt(msg: types.Message):
 
 
 @dp.message_handler(lambda message: message not in list_of_twt, state=DeleteTwitter.choosing)
-def error_twt(msg: types.Message):
+async def error_twt(msg: types.Message):
     await msg.answer('There is no twitter with this username, please try again')
     await Global.waiting_for_action.set()
 

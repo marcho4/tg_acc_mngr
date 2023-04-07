@@ -5,6 +5,7 @@ from data.db_session import SqlAlchemyBase
 class Twitter(SqlAlchemyBase):
     __tablename__ = 'twitters'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user_id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     discord_nickname = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     login = sqlalchemy.Column(sqlalchemy.String, nullable=True, unique=True)
     password = sqlalchemy.Column(sqlalchemy.String, nullable=True)
