@@ -188,8 +188,11 @@ async def get_data(message: types.Message):
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
-    await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
-    await GettingData.choosing_account.set()
+    if list_of_accounts:
+        await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
+        await GettingData.choosing_account.set()
+    else:
+        await message.answer(f'There is no accounts in the database', reply_markup=get_start_keyboard())
 
 
 @dp.message_handler(lambda message: message.text in list_of_accounts, state=GettingData.choosing_account)
@@ -236,8 +239,9 @@ async def getting_bulk_data(msg: types.Message):
 
 
 # ---------------------------------------- Delete Discord ------------------------------------
-@dp.message_handler(commands=['delete_account'], state=Global.waiting_for_action)
+@dp.message_handler(commands=['delete_discord'], state=Global.waiting_for_action)
 async def delete_choice(message: types.Message):
+    print(1111)
     global list_of_accounts
     list_of_accounts = []
     session = get_session()
@@ -249,11 +253,11 @@ async def delete_choice(message: types.Message):
     await DeleteDiscord.choosing.set()
 
 
-@dp.message_handler(lambda message: message in list_of_accounts, state=DeleteDiscord.choosing)
+@dp.message_handler(lambda message: message.text in list_of_accounts, state=DeleteDiscord.choosing)
 async def delete_choice(message: types.Message):
     session = get_session()
-    acc = session.db_query(Account).filter(Account.nickname == message.text).first()
-    acc.delete()
+    acc = session.query(Account).filter(Account.nickname == message.text).first()
+    session.delete(acc)
     session.commit()
     await message.answer('Account has been successfully deleted', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
@@ -261,7 +265,7 @@ async def delete_choice(message: types.Message):
 
 @dp.message_handler(lambda message: message not in list_of_accounts, state=DeleteDiscord.choosing)
 async def error(message: types.Message):
-    await message.answer('There is no account with this nickname, please try again')
+    await message.answer('There is no account with this nickname, please try again', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
 
@@ -274,16 +278,16 @@ async def delete_twt_choice(message: types.Message):
     kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
     for acc in session.query(Twitter).filter(Twitter.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.username)))
-        list_of_accounts.append(str(acc.username))
+        list_of_twt.append(str(acc.username))
     await message.answer(f'Choose account', reply_markup=kb)
     await DeleteTwitter.choosing.set()
 
 
-@dp.message_handler(lambda message: message in list_of_twt, state=DeleteTwitter.choosing)
+@dp.message_handler(lambda message: message.text in list_of_twt, state=DeleteTwitter.choosing)
 async def delete_twt(msg: types.Message):
     session = get_session()
-    acc = session.db_query(Twitter).filter(Twitter.username == msg.text).first()
-    acc.delete()
+    acc = session.query(Twitter).filter(Twitter.username == msg.text).first()
+    session.delete(acc)
     session.commit()
     await msg.answer('Account has been successfully deleted', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
@@ -291,7 +295,7 @@ async def delete_twt(msg: types.Message):
 
 @dp.message_handler(lambda message: message not in list_of_twt, state=DeleteTwitter.choosing)
 async def error_twt(msg: types.Message):
-    await msg.answer('There is no twitter with this username, please try again')
+    await msg.answer('There is no twitter with this username, please try again', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
 
 
