@@ -11,10 +11,12 @@ class GettingData(StatesGroup):
     accepting = State()
 
 
-class AddingAccount(StatesGroup):
-    entering_data = State()
-    wrong_data = State()
-    accepting = State()
+class DeleteDiscord(StatesGroup):
+    choosing = State()
+
+
+class DeleteTwitter(StatesGroup):
+    choosing = State()
 
 
 class AddingTwtAccount(StatesGroup):

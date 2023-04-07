@@ -26,9 +26,9 @@ def get_start_keyboard():
         [
             KeyboardButton(text="/add_discord"),
             KeyboardButton(text="/add_twitter"),
-            KeyboardButton(text="/edit_account"),
-            # KeyboardButton(text="/delete_acc"), under development
-            # KeyboardButton(text="/delete_twitter"), under development
+            KeyboardButton(text="/edit_discord"),
+            KeyboardButton(text="/delete_discord"),
+            KeyboardButton(text="/delete_twitter"),
             # KeyboardButton(text="/edit_twitter"), under development
             KeyboardButton(text="/get_data"),
             KeyboardButton(text="/btc"),
