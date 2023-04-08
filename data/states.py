@@ -34,5 +34,16 @@ class EditingAcc(StatesGroup):
     accepting_changes = State()
 
 
+class EditingTwitter(StatesGroup):
+    choosing_account = State()
+    choosing_param = State()
+    login = State()
+    password = State()
+    nickname = State()
+    phone = State()
+    entering_changes = State()
+    accepting_changes = State()
+
+
 class BulkAdd(StatesGroup):
     entering = State()

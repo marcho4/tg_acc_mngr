@@ -1,12 +1,13 @@
 from data.CONFIG import TOKEN
 from data.account import Account
-from data.keyboard_maker import empty_keyboard, get_start_keyboard, columns
+from data.keyboard_maker import empty_keyboard, get_start_keyboard, columns, columns1
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from data.crypto_price import get_btc_price
 from data.twitter import Twitter
-from data.states import Global, GettingData, AddingTwtAccount, EditingAcc, BulkAdd, DeleteDiscord, DeleteTwitter
+from data.states import Global, GettingData, AddingTwtAccount, EditingAcc, BulkAdd, DeleteDiscord, DeleteTwitter, \
+    EditingTwitter
 from data.get_session import get_session
 
 bot = Bot(token=TOKEN)
@@ -20,12 +21,12 @@ chosen_account = ''
 
 
 # ------------------------- Cancel Command ----------------------------------
-@dp.message_handler(commands=['cancel'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text.lower() == 'cancel', state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
     await message.answer('There is no command to cancel', reply_markup=get_start_keyboard())
 
 
-@dp.message_handler(commands=['cancel'], state='*')
+@dp.message_handler(lambda msg: msg.text.lower() == 'cancel', state='*')
 async def edit_account(message: types.Message):
     await Global.waiting_for_action.set()
     await message.answer('Action canceled', reply_markup=get_start_keyboard())
@@ -44,21 +45,24 @@ async def start_handler(message: types.Message):
 
 
 # ------------------------- Help Command -----------------------------------
-@dp.message_handler(state='*', commands=['help'])
+@dp.message_handler(lambda msg: msg.text.lower() == 'help', state='*')
 async def help_handler(message: types.Message):
-    await message.answer(f'/start\n'
-                         f'/help - list of all available commands\n'
-                         f'/add_discord - add discord account to the data base\n'
-                         f'/add_twitter - add twitter account to the data base\n'
-                         f'/edit_account - edit data for the chosen account\n'
-                         f'/get_data - get data of the account\n'
-                         f'/cancel - cancel the command\n'
-                         f'/sellers - get best account sellers\n'
-                         f'/btc - current price of BTC')
+    await message.answer(
+        f'Help - list of all available commands\n'
+        f'Add discord - add discord account to the data base\n'
+        f'Add twitter - add twitter account to the data base\n'
+        f'Delete discord - delete discord account from the data base\n'
+        f'Delete twitter - delete twitter account from the data base\n'
+        f'Edit discord - edit data for the chosen discord\n'
+        f'Edit twitter - edit data for the chosen discord\n'
+        f'Get data - get data of the account\n'
+        f'Cancel - cancel any command\n'
+        f'Sellers - get best account sellers\n'
+        f'BTC - current price of BTC')
 
 
 # ------------------------- Adding Twitter ----------------------------------
-@dp.message_handler(commands=['add_twitter'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Add twitter', state=Global.waiting_for_action)
 async def add_twitter(message: types.Message):
     await AddingTwtAccount.entering_data.set()
     await message.answer(f'Enter account data in this format:\n'
@@ -100,8 +104,7 @@ async def wd(message: types.Message):
                          'Please, choose one from the list below.\n\nTo cancel use /cancel')
 
 
-@dp.message_handler(lambda message: ';' not in message.text or len(message.text.split(';')) != 4
-                                    or message.text.split(';')[3].isdigit(),
+@dp.message_handler(lambda message: ';' not in message.text or len(message.text.split(';')) != 4,
                     state=AddingTwtAccount.entering_data)
 async def wd(message: types.Message):
     await message.answer('Wrong data or format, please enter again.\n\n'
@@ -109,7 +112,7 @@ async def wd(message: types.Message):
 
 
 # ------------------------- Editing Account Data ----------------------------------
-@dp.message_handler(commands=['edit_discord'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Edit discord', state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
     global list_of_accounts
     list_of_accounts = []
@@ -118,7 +121,7 @@ async def edit_account(message: types.Message):
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
-    await message.answer(f'Choose account', reply_markup=kb)
+    await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await EditingAcc.choosing_account.set()
 
 
@@ -178,8 +181,92 @@ async def wait(message: types.Message):
     await message.answer('There is no account with this nickname')
 
 
+# -------------- Editing Twitter --------------------
+@dp.message_handler(lambda msg: msg.text == 'Edit twitter', state=Global.waiting_for_action)
+async def edit_twitter(message: types.Message):
+    global list_of_twt
+    list_of_twt = []
+    session = get_session()
+    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    for acc in session.query(Twitter).filter(Twitter.user_id == message.from_user.id):
+        kb.add(types.KeyboardButton(text=str(acc.username)))
+        list_of_twt.append(str(acc.username))
+    await message.answer(f'Select the account\n\nTo cancel use /cancel', reply_markup=kb)
+    await EditingTwitter.choosing_account.set()
+
+
+@dp.message_handler(lambda message: message.text in list_of_twt, state=EditingTwitter.choosing_account)
+async def choosing_column(message: types.Message):
+    global chosen_account
+    chosen_account = message.text
+    await message.answer('Choose parameter to edit', reply_markup=columns1)
+    await EditingTwitter.choosing_param.set()
+
+
+@dp.message_handler(lambda message: message.text in ['nickname', 'password', 'login', 'phone'],
+                    state=EditingTwitter.choosing_param)
+async def choosing_param(message: types.Message):
+    if message.text == 'nickname':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingTwitter.nickname.set()
+    if message.text == 'login':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingTwitter.login.set()
+    if message.text == 'password':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingTwitter.password.set()
+    if message.text == 'phone':
+        await message.answer('Enter new value', reply_markup=empty_keyboard)
+        await EditingTwitter.phone.set()
+
+
+@dp.message_handler(state=EditingTwitter.password)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Twitter).filter(Twitter.username == chosen_account).first()
+    acc.password = message.text
+    session.commit()
+    await message.answer(f'New password was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(state=EditingTwitter.login)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Twitter).filter(Twitter.username == chosen_account).first()
+    acc.login = message.text
+    session.commit()
+    await message.answer(f'New login was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(state=EditingTwitter.nickname)
+async def wait(message: types.Message):
+    session = get_session()
+    acc = session.query(Twitter).filter(Twitter.username == chosen_account).first()
+    acc.username = message.text
+    session.commit()
+    await message.answer(f'New username was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(state=EditingTwitter.phone)
+async def phone(message: types.Message):
+    session = get_session()
+    acc = session.query(Twitter).filter(Twitter.username == chosen_account).first()
+    acc.phone = message.text
+    session.commit()
+    await message.answer(f'New password was set', reply_markup=get_start_keyboard())
+    await Global.waiting_for_action.set()
+
+
+@dp.message_handler(lambda message: message.text not in list_of_accounts, state=EditingAcc.choosing_account)
+async def wait(message: types.Message):
+    await message.answer('There is no account with this nickname')
+
+
 # ------------------------- Get Data Command ----------------------------------
-@dp.message_handler(commands=['get_data'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Get data', state=Global.waiting_for_action)
 async def get_data(message: types.Message):
     global list_of_accounts
     list_of_accounts = []
@@ -214,9 +301,12 @@ async def wrong_acc(message: types.Message):
     await message.answer("There isn't any accounts with this nickname\n\nTo cancel use /cancel")
 
 
-@dp.message_handler(commands=['add_discord'], state=Global.waiting_for_action)
+# ------------------- Adding Discord ----------------------
+@dp.message_handler(lambda msg: msg.text == 'Add discord', state=Global.waiting_for_action)
 async def bulk(msg: types.Message):
-    await msg.answer('Enter account data in this format:\n\nlogin:password:token:nick\n\nYou can add multiple accounts')
+    await msg.answer(
+        'Enter account data in this format:\n\nlogin:password:token:nick\n\nYou can add multiple accounts'
+        '\n\nTo cancel use /cancel')
     await BulkAdd.entering.set()
 
 
@@ -239,9 +329,8 @@ async def getting_bulk_data(msg: types.Message):
 
 
 # ---------------------------------------- Delete Discord ------------------------------------
-@dp.message_handler(commands=['delete_discord'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Delete discord', state=Global.waiting_for_action)
 async def delete_choice(message: types.Message):
-    print(1111)
     global list_of_accounts
     list_of_accounts = []
     session = get_session()
@@ -249,7 +338,7 @@ async def delete_choice(message: types.Message):
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
-    await message.answer(f'Choose account', reply_markup=kb)
+    await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await DeleteDiscord.choosing.set()
 
 
@@ -270,7 +359,7 @@ async def error(message: types.Message):
 
 
 # ---------------------------------------- Delete Twitter ------------------------------------
-@dp.message_handler(commands=['delete_twitter'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Delete twitter', state=Global.waiting_for_action)
 async def delete_twt_choice(message: types.Message):
     global list_of_twt
     list_of_twt = []
@@ -279,7 +368,7 @@ async def delete_twt_choice(message: types.Message):
     for acc in session.query(Twitter).filter(Twitter.user_id == message.from_user.id):
         kb.add(types.KeyboardButton(text=str(acc.username)))
         list_of_twt.append(str(acc.username))
-    await message.answer(f'Choose account', reply_markup=kb)
+    await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await DeleteTwitter.choosing.set()
 
 
@@ -300,17 +389,29 @@ async def error_twt(msg: types.Message):
 
 
 # ------------------------- Simple Commands Just For Fun ----------------------------------
-@dp.message_handler(commands=['sigma'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Sigma', state=Global.waiting_for_action)
 async def sigma(message: types.Message):
     await message.answer(f'https://youtube.com/shorts/NrIQMPwUyTg?feature=share')
 
 
-@dp.message_handler(commands=['btc'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'BTC', state=Global.waiting_for_action)
 async def btc(message: types.Message):
     await message.answer(get_btc_price())
 
 
-@dp.message_handler(commands=['sellers'], state=Global.waiting_for_action)
+@dp.message_handler(lambda msg: msg.text == 'Export', state=Global.waiting_for_action)
+async def btc(message: types.Message):
+    session = get_session()
+    with open('accounts.txt', 'w+') as doc:
+        for ds in session.query(Account).filter(Account.user_id == message.from_user.id).all():
+            doc.write(f'{ds.login}:{ds.password}:{ds.token}:{ds.nickname}' + '\n')
+        doc.close()
+    with open('accounts.txt', 'rb') as f:
+        await bot.send_document(message.from_user.id, f)
+        f.close()
+
+
+@dp.message_handler(lambda msg: msg.text == 'Sellers', state=Global.waiting_for_action)
 async def sigma(message: types.Message):
     await message.answer(
         f'Discord accounts\n\n'

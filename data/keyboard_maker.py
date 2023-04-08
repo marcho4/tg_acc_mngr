@@ -1,6 +1,5 @@
 from aiogram.types import ReplyKeyboardRemove, \
-    ReplyKeyboardMarkup, KeyboardButton, \
-    InlineKeyboardMarkup, InlineKeyboardButton
+    ReplyKeyboardMarkup, KeyboardButton
 
 
 def make_row_keyboard(items: list[str]) -> ReplyKeyboardMarkup:
@@ -23,23 +22,22 @@ keyboard = ReplyKeyboardMarkup(
 
 def get_start_keyboard():
     commands = [
-        [
-            KeyboardButton(text="/add_discord"),
-            KeyboardButton(text="/add_twitter"),
-            KeyboardButton(text="/edit_discord"),
-            KeyboardButton(text="/delete_discord"),
-            KeyboardButton(text="/delete_twitter"),
-            # KeyboardButton(text="/edit_twitter"), under development
-            KeyboardButton(text="/get_data"),
-            KeyboardButton(text="/btc"),
-            KeyboardButton(text="/sellers")
-        ],
+        KeyboardButton(text="Add discord"),
+        KeyboardButton(text="Add twitter"),
+        KeyboardButton(text="Edit discord"),
+        KeyboardButton(text="Delete discord"),
+        KeyboardButton(text="Delete twitter"),
+        KeyboardButton(text="Edit twitter"),
+        KeyboardButton(text="Get data"),
+        KeyboardButton(text="Export"),
+        KeyboardButton(text="BTC"),
+        KeyboardButton(text="Sellers")
     ]
     start_keyboard = ReplyKeyboardMarkup(
         resize_keyboard=True,
         input_field_placeholder="Choose action"
     )
-    for x in commands[0]:
+    for x in commands:
         start_keyboard.add(x)
     return start_keyboard
 
@@ -48,3 +46,9 @@ columns = ReplyKeyboardMarkup(
     resize_keyboard=True,
     input_field_placeholder="Choose column"
 ).add(KeyboardButton(text="nickname")).add(KeyboardButton(text="login")).add(KeyboardButton(text="password"))
+
+columns1 = ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    input_field_placeholder="Choose column"
+).add(KeyboardButton(text="nickname")).add(KeyboardButton(text="login")).add(KeyboardButton(text="password")).add(
+    KeyboardButton(text="phone"))
