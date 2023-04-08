@@ -1,3 +1,5 @@
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+
 from data.CONFIG import TOKEN
 from data.account import Account
 from data.keyboard_maker import empty_keyboard, get_start_keyboard, columns, columns1
@@ -21,12 +23,12 @@ chosen_account = ''
 
 
 # ------------------------- Cancel Command ----------------------------------
-@dp.message_handler(lambda msg: msg.text.lower() == 'cancel', state=Global.waiting_for_action)
+@dp.message_handler(commands=['cancel'], state=Global.waiting_for_action)
 async def edit_account(message: types.Message):
     await message.answer('There is no command to cancel', reply_markup=get_start_keyboard())
 
 
-@dp.message_handler(lambda msg: msg.text.lower() == 'cancel', state='*')
+@dp.message_handler(commands=['cancel'], state='*')
 async def edit_account(message: types.Message):
     await Global.waiting_for_action.set()
     await message.answer('Action canceled', reply_markup=get_start_keyboard())
@@ -56,7 +58,7 @@ async def help_handler(message: types.Message):
         f'Edit discord - edit data for the chosen discord\n'
         f'Edit twitter - edit data for the chosen discord\n'
         f'Get data - get data of the account\n'
-        f'Cancel - cancel any command\n'
+        f'/cancel - cancel any command\n'
         f'Sellers - get best account sellers\n'
         f'BTC - current price of BTC')
 
@@ -117,9 +119,9 @@ async def edit_account(message: types.Message):
     global list_of_accounts
     list_of_accounts = []
     session = get_session()
-    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    kb = ReplyKeyboardMarkup(row_width=3, input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
-        kb.add(types.KeyboardButton(text=str(acc.nickname)))
+        kb.insert(types.KeyboardButton(text=str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
     await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await EditingAcc.choosing_account.set()
@@ -187,9 +189,9 @@ async def edit_twitter(message: types.Message):
     global list_of_twt
     list_of_twt = []
     session = get_session()
-    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    kb = ReplyKeyboardMarkup(row_width=3, input_field_placeholder="Select account")
     for acc in session.query(Twitter).filter(Twitter.user_id == message.from_user.id):
-        kb.add(types.KeyboardButton(text=str(acc.username)))
+        kb.insert(types.KeyboardButton(text=str(acc.username)))
         list_of_twt.append(str(acc.username))
     await message.answer(f'Select the account\n\nTo cancel use /cancel', reply_markup=kb)
     await EditingTwitter.choosing_account.set()
@@ -271,9 +273,9 @@ async def get_data(message: types.Message):
     global list_of_accounts
     list_of_accounts = []
     session = get_session()
-    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    kb = ReplyKeyboardMarkup(row_width=3, input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
-        kb.add(types.KeyboardButton(text=str(acc.nickname)))
+        kb.insert(KeyboardButton(str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
     if list_of_accounts:
         await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
@@ -334,9 +336,9 @@ async def delete_choice(message: types.Message):
     global list_of_accounts
     list_of_accounts = []
     session = get_session()
-    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    kb = ReplyKeyboardMarkup(row_width=3, input_field_placeholder="Select account")
     for acc in session.query(Account).filter(Account.user_id == message.from_user.id):
-        kb.add(types.KeyboardButton(text=str(acc.nickname)))
+        kb.insert(KeyboardButton(str(acc.nickname)))
         list_of_accounts.append(str(acc.nickname))
     await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await DeleteDiscord.choosing.set()
@@ -345,8 +347,7 @@ async def delete_choice(message: types.Message):
 @dp.message_handler(lambda message: message.text in list_of_accounts, state=DeleteDiscord.choosing)
 async def delete_choice(message: types.Message):
     session = get_session()
-    acc = session.query(Account).filter(Account.nickname == message.text).first()
-    session.delete(acc)
+    session.delete(session.query(Account).filter(Account.nickname == message.text).first())
     session.commit()
     await message.answer('Account has been successfully deleted', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
@@ -364,9 +365,9 @@ async def delete_twt_choice(message: types.Message):
     global list_of_twt
     list_of_twt = []
     session = get_session()
-    kb = types.ReplyKeyboardMarkup(input_field_placeholder="Select account")
+    kb = ReplyKeyboardMarkup(row_width=3, input_field_placeholder="Select account")
     for acc in session.query(Twitter).filter(Twitter.user_id == message.from_user.id):
-        kb.add(types.KeyboardButton(text=str(acc.username)))
+        kb.insert(types.KeyboardButton(text=str(acc.username)))
         list_of_twt.append(str(acc.username))
     await message.answer(f'Choose account\n\nTo cancel use /cancel', reply_markup=kb)
     await DeleteTwitter.choosing.set()
@@ -375,8 +376,7 @@ async def delete_twt_choice(message: types.Message):
 @dp.message_handler(lambda message: message.text in list_of_twt, state=DeleteTwitter.choosing)
 async def delete_twt(msg: types.Message):
     session = get_session()
-    acc = session.query(Twitter).filter(Twitter.username == msg.text).first()
-    session.delete(acc)
+    session.delete(session.query(Twitter).filter(Twitter.username == msg.text).first())
     session.commit()
     await msg.answer('Account has been successfully deleted', reply_markup=get_start_keyboard())
     await Global.waiting_for_action.set()
@@ -389,11 +389,6 @@ async def error_twt(msg: types.Message):
 
 
 # ------------------------- Simple Commands Just For Fun ----------------------------------
-@dp.message_handler(lambda msg: msg.text == 'Sigma', state=Global.waiting_for_action)
-async def sigma(message: types.Message):
-    await message.answer(f'https://youtube.com/shorts/NrIQMPwUyTg?feature=share')
-
-
 @dp.message_handler(lambda msg: msg.text == 'BTC', state=Global.waiting_for_action)
 async def btc(message: types.Message):
     await message.answer(get_btc_price())
@@ -405,6 +400,10 @@ async def btc(message: types.Message):
     with open('accounts.txt', 'w+') as doc:
         for ds in session.query(Account).filter(Account.user_id == message.from_user.id).all():
             doc.write(f'{ds.login}:{ds.password}:{ds.token}:{ds.nickname}' + '\n')
+        doc.write('\nTwitters\n')
+        for twt in session.query(Twitter).filter(Twitter.user_id == message.from_user.id).all():
+            doc.write(
+                f'{twt.login}:{twt.password}:{twt.username}:{twt.phone} connected to {twt.discord_nickname}' + '\n')
         doc.close()
     with open('accounts.txt', 'rb') as f:
         await bot.send_document(message.from_user.id, f)

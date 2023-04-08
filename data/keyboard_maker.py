@@ -35,16 +35,25 @@ def get_start_keyboard():
     ]
     start_keyboard = ReplyKeyboardMarkup(
         resize_keyboard=True,
-        input_field_placeholder="Choose action"
+        input_field_placeholder="Choose action",
+        row_width=3
     )
-    for x in commands:
-        start_keyboard.add(x)
+    start_keyboard.row(KeyboardButton(text="Add discord"),
+                       KeyboardButton(text="Edit discord"),
+                       KeyboardButton(text="Delete discord"))
+    start_keyboard.row(KeyboardButton(text="Add twitter"),
+                       KeyboardButton(text="Edit twitter"),
+                       KeyboardButton(text="Delete twitter"))
+    start_keyboard.row(KeyboardButton(text="Get data"),
+                       KeyboardButton(text="Export"),
+                       KeyboardButton(text="BTC"),
+                       KeyboardButton(text="Sellers"))
     return start_keyboard
 
 
 columns = ReplyKeyboardMarkup(
     resize_keyboard=True,
-    input_field_placeholder="Choose column"
+    input_field_placeholder="Choose column",
 ).add(KeyboardButton(text="nickname")).add(KeyboardButton(text="login")).add(KeyboardButton(text="password"))
 
 columns1 = ReplyKeyboardMarkup(
